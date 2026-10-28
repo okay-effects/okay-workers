@@ -28,7 +28,7 @@ JS only:
 - `Worker.serve(answer: Env => Request => Response ! Async)`: the `fetch` the entry exports — the JS request read
   (its body as bytes), the program started with `Async.start`, the response made; a failure is a 500 with no detail
   and the error on the console. `Env` is the bindings and vars as given (`env.text("SITE")`, `env.binding("DB")`).
-- `SendEmail(binding, EmailMessage)` and `Mime`: a letter as a raw MIME message (UTF-8, quoted-printable text and
+- `SendEmail(binding, EmailMessage)` and `Mime`: a letter as a raw MIME message (UTF-8, base64 text and
   HTML, RFC 2047 subject), sent through a `send_email` binding. `EmailMessage` is passed in by the entry
   (`import { EmailMessage } from "cloudflare:email"`) so the module loads outside Workers (Node's tests).
 - `template/entry.mjs`: the Worker's entry — imports the linked module, exports `default { fetch }`.
@@ -48,5 +48,5 @@ JS only:
 
 ## Design
 
-Scala 3.3, JVM and Scala.js (`-Dplatforms=jvm,js`), okay-scala 0.1.1. Package `okay.workers`. Released as okay-scala
+Scala 3.3, JVM and Scala.js (both always built), okay-scala 0.1.1. Package `okay.workers`. Released as okay-scala
 is: a Maven repository on GitHub Pages (RELEASING.md).
