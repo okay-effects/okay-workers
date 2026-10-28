@@ -1,3 +1,7 @@
+> **Superseded by [okay-effects/okay-serverless](https://github.com/okay-effects/okay-serverless); archived.** Its
+> mail as MIME (now `Mails` with HTML, `Mails.deliver`) and its tests of an object's SQL under Node moved there
+> (2026-10-28). The release 0.1.0 stays on GitHub Pages for anyone who resolved it.
+
 # okay-workers
 
 Cloudflare Workers for [okay-scala](https://github.com/okay-effects/okay-scala) programs. A Worker is a function from
