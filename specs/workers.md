@@ -6,7 +6,8 @@ A program on okay-scala answers a Worker's requests: its effects are the data mo
 handlers. `Worker.serve` makes the ES module's `fetch(request, env, ctx)` of a function from the request to a program
 over `Async` (okay-scala's `std.Async`); D1, R2, `fetch` and Cloudflare's `send_email` are handlers into `Async`.
 
-Why a repository of its own: okay-http and okay-faces' Cloudflare module are on okay-simple (okay-http: "on
+It generalises the hand-written fronts of okay-guard (`worker/`) and okay-remote (`relay/`) — routes over
+`js.Dynamic`, a Durable Object behind — into effects and handlers. Why a repository of its own: okay-http and okay-faces' Cloudflare module are on okay-simple (okay-http: "on
 okay-simple alone"); this is okay-scala's, built on its `Async`, with nothing of okay-simple. What a Worker needs that
 is not Cloudflare's — the request and response as values, SQL and blobs as effects, the JVM's handlers for tests — is
 here too, so a program is tested on the JVM against SQLite, the same SQL as D1's.
@@ -31,6 +32,12 @@ JS only:
 - `SendEmail(binding, EmailMessage)` and `Mime`: a letter as a raw MIME message (UTF-8, base64 text and
   HTML, RFC 2047 subject), sent through a `send_email` binding. `EmailMessage` is passed in by the entry
   (`import { EmailMessage } from "cloudflare:email"`) so the module loads outside Workers (Node's tests).
+- `SendEmail.structured(binding, letter)`: Cloudflare Email Service's structured `send` (Workers Paid, beta), to any
+  recipient the binding allows.
+- `Durable.sql(storage)`: `Sql` in a Durable Object's SQLite storage (a `new_sqlite_classes` class: the free plan's,
+  where D1 is not to be had) — synchronous, a batch in `transactionSync`. `Worker.front(namespace, pick)(answer)`: a
+  request `pick` names passed untouched to that Durable Object, the rest answered in the Worker;
+  `Worker.durable(state, env)(answer)`: the object's `fetch`, its storage in `env.storage`.
 - `template/entry.mjs`: the Worker's entry — imports the linked module, exports `default { fetch }`.
 
 ## Behavior

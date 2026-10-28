@@ -6,7 +6,6 @@ import okay.scala3.std.*
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.scalajs.js
-import scala.scalajs.js.typedarray.ArrayBuffer
 
 /** `Sql` IN A WORKER: a D1 binding — each statement prepared and bound, a batch D1's `batch` (all or none) */
 object D1:
@@ -40,14 +39,4 @@ object D1:
       case Value.Null => null
     }*)
 
-  private def value(v: js.Any): Value =
-    if v == null || js.isUndefined(v) then Value.Null
-    else (v: Any) match
-      case s: String => Value.Text(s)
-      case d: Double => if d.isWhole && math.abs(d) < 9.0e15 then Value.Integer(d.toLong) else Value.Real(d)
-      case i: Int => Value.Integer(i.toLong)
-      case b: Boolean => Value.Integer(if b then 1 else 0)
-      case _ if js.typeOf(v) == "object" && v.isInstanceOf[ArrayBuffer] => Value.Blob(Js.bytes(v.asInstanceOf[ArrayBuffer]))
-      case _ if js.Array.isArray(v) =>
-        Value.Blob(Bytes(v.asInstanceOf[js.Array[Double]].toArray.map(_.toInt.toByte)))
-      case _ => Value.Text(String.valueOf(v))
+  private def value(v: js.Any): Value = Durable.value(v)

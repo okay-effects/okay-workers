@@ -10,7 +10,8 @@ val fetch = Worker.serve(env => request => Fetch.run(D1.run(env.binding("DB"))(R
 ```
 
 - Effects: `Http` (`Send`), `Sql` (`All`, `Run`, `Batch`), `Blobs` (`Put`, `Get`, `Delete`).
-- In a Worker (Scala.js, an ES module): `Worker.serve`, `D1.run`, `R2.run`, `Fetch.run`, `SendEmail.send` with `Mime`.
+- In a Worker (Scala.js, an ES module): `Worker.serve`, `D1.run`, `R2.run`, `Fetch.run`, `SendEmail.send` with `Mime`,
+  `SendEmail.structured`, `Durable.sql` (a Durable Object's SQLite), `Worker.front` / `Worker.durable`.
 - On the JVM, for tests: `Jdbc.run` (SQLite: the same SQL as D1's), `Jdk.run`; everywhere `Blobs.memory()`,
   `Http.answering(f)`.
 - `template/entry.mjs`: the Worker's entry around the linked `main.js`.

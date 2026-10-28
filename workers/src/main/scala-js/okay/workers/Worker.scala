@@ -11,12 +11,14 @@ import scala.scalajs.js.typedarray.ArrayBuffer
 
 /** A WORKER'S ENVIRONMENT: its vars and secrets by name, its bindings (D1, R2, `send_email`), and the request's
  * context (`waitUntil`) */
-final class Env(val raw: js.Dynamic, val context: js.Dynamic):
+final class Env(val raw: js.Dynamic, val context: js.Dynamic, val state: js.Dynamic = null):
   /** a var or a secret: none when not set or empty */
   def text(name: String): Option[String] =
     val v = raw.selectDynamic(name)
     if js.isUndefined(v) || v == null then None else Some(v.toString).filter(_.nonEmpty)
   def binding(name: String): js.Dynamic = raw.selectDynamic(name)
+  /** in a Durable Object: its storage (`Durable.sql(env.storage)`) */
+  def storage: js.Dynamic = state.storage
   /** `f` kept running after the response is sent */
   def waitUntil(f: Future[Any]): Unit =
     if !js.isUndefined(context) && context != null then context.waitUntil(f.toJSPromise)
@@ -31,9 +33,31 @@ object Worker:
   type Fetch = js.Function3[js.Dynamic, js.Dynamic, js.Dynamic, js.Promise[js.Dynamic]]
 
   def serve(answer: Env => Request => Response ! Async): Fetch = (request, env, ctx) =>
-    read(request).flatMap(r => Async.toFuture(answer(Env(env, ctx))(r)))
-      .recover { case e =>
-        js.Dynamic.global.console.error("okay-workers: " + e.toString)
+    serveIn(Env(env, ctx), answer)(request)
+
+  /** a request the Worker passes, untouched, to the Durable Object `pick` names in `namespace` (a binding); the rest
+   * answered here by `answer` */
+  def front(namespace: String, pick: Request => Option[String])(answer: Env => Request => Response ! Async): Fetch =
+    val here = serve(answer)
+    (request, env, ctx) =>
+      val r = Request(request.method.asInstanceOf[String], request.url.asInstanceOf[String],
+        Js.headers(request.headers))
+      pick(r) match
+        case Some(name) =>
+          val ns = env.selectDynamic(namespace)
+          ns.get(ns.idFromName(name)).fetch(request).asInstanceOf[js.Promise[js.Dynamic]]
+        case None => here(request, env, ctx)
+
+  /** a Durable Object's `fetch`: as `serve`, the program given the object's state (`env.storage`) */
+  def durable(state: js.Dynamic, env: js.Dynamic)(answer: Env => Request => Response ! Async)
+    : js.Function1[js.Dynamic, js.Promise[js.Dynamic]] =
+    request => serveIn(Env(env, null, state), answer)(request)
+
+  private def serveIn(e: Env, answer: Env => Request => Response ! Async)(request: js.Dynamic)
+    : js.Promise[js.Dynamic] =
+    read(request).flatMap(r => Async.toFuture(answer(e)(r)))
+      .recover { case err =>
+        js.Dynamic.global.console.error("okay-workers: " + err.toString)
         Response.text(500, "Internal error")
       }.map(response).toJSPromise
 
