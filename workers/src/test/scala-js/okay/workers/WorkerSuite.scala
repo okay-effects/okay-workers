@@ -33,3 +33,27 @@ class WorkerSuite extends munit.FunSuite:
       res.text().asInstanceOf[js.Promise[String]].toFuture.map(t => assert(!t.contains("secret")))
     }
   }
+
+  test("a front: to an object by name, to the assets, or here") {
+    val asked = scala.collection.mutable.Buffer.empty[String]
+    def answering(what: String) = js.Dynamic.literal(fetch = ((_: js.Dynamic) => {
+      asked += what
+      js.Promise.resolve[js.Dynamic](js.Dynamic.newInstance(js.Dynamic.global.Response)(what))
+    }): js.Function1[js.Dynamic, js.Promise[js.Dynamic]])
+    val ns = js.Dynamic.literal(idFromName = ((n: String) => n): js.Function1[String, String],
+      get = ((id: String) => answering("object " + id)): js.Function1[String, js.Dynamic])
+    val env = js.Dynamic.literal(SITES = ns, ASSETS = answering("assets"))
+    val front = Worker.routed("SITES")(r =>
+      if r.path.startsWith("/api") then Worker.Route.ToObject("szykownia")
+      else if r.path == "/" then Worker.Route.Here else Worker.Route.ToAssets)(
+      _ => _ => pure(Response.redirect("/pl/")))
+    def go(path: String) = front(js.Dynamic.newInstance(js.Dynamic.global.Request)("https://x.dev" + path), env,
+      js.Dynamic.literal()).toFuture
+    for
+      a <- go("/api/order")
+      b <- go("/pl/")
+      c <- go("/")
+    yield
+      assertEquals(asked.toVector, Vector("object szykownia", "assets"))
+      assertEquals(c.status.asInstanceOf[Int], 302)
+  }

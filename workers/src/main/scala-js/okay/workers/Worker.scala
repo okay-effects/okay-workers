@@ -35,18 +35,26 @@ object Worker:
   def serve(answer: Env => Request => Response ! Async): Fetch = (request, env, ctx) =>
     serveIn(Env(env, ctx), answer)(request)
 
-  /** a request the Worker passes, untouched, to the Durable Object `pick` names in `namespace` (a binding); the rest
-   * answered here by `answer` */
-  def front(namespace: String, pick: Request => Option[String])(answer: Env => Request => Response ! Async): Fetch =
+  /** where the Worker sends a request: untouched to a Durable Object of `namespace` by name, untouched to the
+   * static assets' binding, or answered here */
+  enum Route:
+    case ToObject(name: String)
+    case ToAssets
+    case Here
+
+  /** the Worker as a front: each request routed by `route` — the static pages, a site's object, or `answer` */
+  def routed(namespace: String, assets: String = "ASSETS")(route: Request => Route)(
+    answer: Env => Request => Response ! Async): Fetch =
     val here = serve(answer)
     (request, env, ctx) =>
       val r = Request(request.method.asInstanceOf[String], request.url.asInstanceOf[String],
         Js.headers(request.headers))
-      pick(r) match
-        case Some(name) =>
+      route(r) match
+        case Route.ToObject(name) =>
           val ns = env.selectDynamic(namespace)
           ns.get(ns.idFromName(name)).fetch(request).asInstanceOf[js.Promise[js.Dynamic]]
-        case None => here(request, env, ctx)
+        case Route.ToAssets => env.selectDynamic(assets).fetch(request).asInstanceOf[js.Promise[js.Dynamic]]
+        case Route.Here => here(request, env, ctx)
 
   /** a Durable Object's `fetch`: as `serve`, the program given the object's state (`env.storage`) */
   def durable(state: js.Dynamic, env: js.Dynamic)(answer: Env => Request => Response ! Async)

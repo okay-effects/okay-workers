@@ -35,8 +35,8 @@ JS only:
 - `SendEmail.structured(binding, letter)`: Cloudflare Email Service's structured `send` (Workers Paid, beta), to any
   recipient the binding allows.
 - `Durable.sql(storage)`: `Sql` in a Durable Object's SQLite storage (a `new_sqlite_classes` class: the free plan's,
-  where D1 is not to be had) — synchronous, a batch in `transactionSync`. `Worker.front(namespace, pick)(answer)`: a
-  request `pick` names passed untouched to that Durable Object, the rest answered in the Worker;
+  where D1 is not to be had) — synchronous, a batch in `transactionSync`. `Worker.routed(namespace, assets)(route)(answer)`: each
+  request routed — untouched to a Durable Object by name, untouched to the static assets, or answered in the Worker;
   `Worker.durable(state, env)(answer)`: the object's `fetch`, its storage in `env.storage`.
 - `template/entry.mjs`: the Worker's entry — imports the linked module, exports `default { fetch }`.
 
